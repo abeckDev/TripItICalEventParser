@@ -41,12 +41,26 @@ public class TripEvent
     /// <summary>
     /// Gets or sets the timezone of the event.
     /// </summary>
-    /// <value>The event description from the iCal <-----> field.</value>
+    /// <value>The event timezone identifier (e.g., "Europe/Berlin").</value>
     public string Timezone { get; set; }
 
     /// <summary>
-    /// Defines whether this is an iCal Event Describing the parent trip in TripIt (true) or an Event within a trip (false)
+    /// Gets or sets whether this event represents a trip header (parent trip container) or an individual trip event.
     /// </summary>
+    /// <value>
+    /// <c>true</c> if this is a trip header event (main trip container in TripIt); 
+    /// <c>false</c> if this is an individual event within a trip (flight, hotel, etc.).
+    /// </value>
+    /// <remarks>
+    /// Trip headers are identified by their description starting with "[TravelerName] is in [Location]".
+    /// While all events are returned in UTC format for consistent processing, this flag allows downstream
+    /// consumers (like Logic Apps or Power Automate) to apply different timezone handling if needed:
+    /// - Trip header events: May be displayed in European timezone for better user experience
+    /// - Individual events: Typically kept in UTC or converted to local event timezone
+    /// 
+    /// This distinction is important for proper calendar display, as trip headers represent
+    /// the overall trip period, while individual events have specific local times.
+    /// </remarks>
     public bool IsTripHeadEvent { get; set; }
 
 }
