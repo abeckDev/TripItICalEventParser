@@ -53,9 +53,10 @@ public class ParseICalFeed
 
         // Extract and validate the iCal feed URL from query parameters
         string icalFeedUrl = req.Query["icalFeedUrl"];
-        if (string.IsNullOrEmpty(icalFeedUrl))
+        string travelerName = req.Query["travelerName"];
+        if (string.IsNullOrEmpty(icalFeedUrl) || string.IsNullOrEmpty(travelerName))
         {
-            return new BadRequestObjectResult("Missing 'icalFeedUrl' query parameter.");
+            return new BadRequestObjectResult("Missing 'icalFeedUrl' and/or 'travelerName' query parameter.");
         }
 
         // Download the iCal feed from the provided URL
@@ -97,7 +98,7 @@ public class ParseICalFeed
                 Description = calendarEvent.Description,
                 EventStart = calendarEvent.Start.AsUtc,
                 EventEnd = calendarEvent.End.AsUtc,
-
+                IsTripHeadEvent = calendarEvent.Description != null && calendarEvent.Description.StartsWith($"{travelerName} is in")
             });
         }
 

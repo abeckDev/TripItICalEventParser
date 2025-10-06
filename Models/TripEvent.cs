@@ -38,4 +38,15 @@ public class TripEvent
     /// <value>The event description from the iCal DESCRIPTION field.</value>
     public string Description { get; set; }
 
+    /// <summary>
+    /// Gets or sets the timezone of the event.
+    /// </summary>
+    /// <value>The event description from the iCal <-----> field.</value>
+    public string Timezone { get; set; }
+
+    /// <summary>
+    /// Defines whether this is an iCal Event Describing the parent trip in TripIt (true) or an Event within a trip (false)
+    /// </summary>
+    public bool IsTripHeadEvent { get; set; }
+
 }
