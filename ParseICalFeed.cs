@@ -39,12 +39,24 @@ public class ParseICalFeed
     /// <remarks>
     /// This function:
     /// - Downloads the iCal feed from the provided URL
-    /// - Filters events to the current calendar year (starting January 1st)
-    /// - Converts event times to UTC
+    /// - Filters events to the current calendar year (starting January 1st in Europe/Berlin timezone)
+    /// - Converts all event times to UTC for consistent processing
+    /// - Identifies trip header events vs individual trip events
     /// - Returns only basic event information suitable for Power Automate processing
     /// 
+    /// <b>Trip Headers vs Individual Events:</b>
+    /// TripIt iCal feeds contain two types of events:
+    /// 1. <b>Trip Header Events</b>: Main trip containers that represent the overall trip period.
+    ///    Identified by descriptions starting with "[TravelerName] is in [Location]".
+    ///    These are marked with IsTripHeadEvent=true.
+    /// 2. <b>Individual Trip Events</b>: Specific events within a trip (flights, hotels, car rentals, etc.).
+    ///    These have detailed event information and are marked with IsTripHeadEvent=false.
+    /// 
+    /// All events are returned in UTC format. Downstream consumers (Logic Apps, Power Automate) can use
+    /// the IsTripHeadEvent flag to apply different timezone handling if needed for optimal calendar display.
+    /// 
     /// Example usage:
-    /// GET /api/ParseICalFeed?icalFeedUrl=https://www.tripit.com/feed/ical/private/[key]/tripit.ics
+    /// GET /api/ParseICalFeed?icalFeedUrl=https://www.tripit.com/feed/ical/private/[key]/tripit.ics&amp;travelerName=John
     /// </remarks>
     [Function("ParseICalFeed")]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequest req)
@@ -78,6 +90,7 @@ public class ParseICalFeed
 
         // Define the start date for event filtering (beginning of current year in Berlin timezone)
         // This ensures we only get events from the current calendar year
+        // Europe/Berlin timezone is used for filtering to align with the typical user's timezone context
         var Start = new CalDateTime(new DateTime(DateTime.UtcNow.Year, 1, 1), "Europe/Berlin");
 
         // Get all event occurrences from the start date onwards and remove duplicates
@@ -91,14 +104,22 @@ public class ParseICalFeed
         var responseEvents = new List<TripEvent>();
         foreach (var calendarEvent in events)
         {
+            // Identify trip header events by their description pattern
+            // Trip headers in TripIt follow the pattern: "[TravelerName] is in [Location]"
+            // All other events are individual trip components (flights, hotels, etc.)
+            bool isTripHeader = calendarEvent.Description != null && 
+                                calendarEvent.Description.StartsWith($"{travelerName} is in");
+            
             responseEvents.Add(new TripEvent
             {
                 EventTitel = calendarEvent.Summary,
                 Location = calendarEvent.Location,
                 Description = calendarEvent.Description,
+                // All events are converted to UTC for consistent processing
+                // Downstream consumers can use IsTripHeadEvent to apply timezone-specific display logic
                 EventStart = calendarEvent.Start.AsUtc,
                 EventEnd = calendarEvent.End.AsUtc,
-                IsTripHeadEvent = calendarEvent.Description != null && calendarEvent.Description.StartsWith($"{travelerName} is in")
+                IsTripHeadEvent = isTripHeader
             });
         }
 
